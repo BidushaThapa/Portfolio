@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import emailjs from "@emailjs/browser";
 
 // ─── Framer Motion mock (inline lightweight animation via CSS + Intersection Observer) ───
 // Since we're in artifact mode, we use a custom hook + CSS transitions
@@ -110,6 +111,25 @@ const PROJECTS = [
     tech: ["React", "Firebase", "Node.js", "Maps API"],
     emoji: "🧭",
     accent: "#f97316",
+    github: "https://github.com",
+  },
+  {
+    title: "VayuSwasthya (Health Monitoring App)",
+    desc: "VayuSwasthya is a smart health monitoring platform focused on preventive healthcare and medicine sustainability, helping users track vital health metrics, manage medicines, and monitor overall wellness.",
+    features: [
+      { icon: "💊", text: "Track medicines with expiry alerts and low-stock notifications" },
+      { icon: "❤️", text: "Monitor vital health metrics like Blood Pressure and BMI" },
+      { icon: "📊", text: "Visualize health trends through interactive dashboard graphs" },
+      { icon: "🔔", text: "Receive timely health alerts and medication reminders" },
+    ],
+    impact: [
+      "Promotes proactive health monitoring",
+      "Encourages responsible medicine management",
+      "Supports sustainable healthcare practices",
+    ],
+    tech: ["Flutter", "Node.js", "React", "MongoDB"],
+    emoji: "🏥",
+    accent: "#10b981",
     github: "https://github.com",
   },
 ];
@@ -441,13 +461,14 @@ function Hero({ dark, scrollTo }) {
   );
 }
 
-function PrimaryBtn({ children, onClick, dark }) {
+function PrimaryBtn({ children, onClick, dark, disabled = false }) {
   const [h, setH] = useState(false);
   return (
     <button
       onClick={onClick}
       onMouseEnter={() => setH(true)}
       onMouseLeave={() => setH(false)}
+      disabled={disabled}
       style={{
         background: h ? "linear-gradient(135deg, #4338ca, #6366f1)" : "linear-gradient(135deg, #4f46e5, #818cf8)",
         color: "#fff", border: "none", cursor: "pointer",
@@ -456,6 +477,8 @@ function PrimaryBtn({ children, onClick, dark }) {
         boxShadow: h ? "0 8px 24px rgba(99,102,241,0.45)" : "0 4px 12px rgba(99,102,241,0.3)",
         transition: "all 0.25s", transform: h ? "translateY(-2px) scale(1.03)" : "none",
         letterSpacing: "-0.01em",
+        opacity: disabled ? 0.7 : 1,
+        pointerEvents: disabled ? "none" : "auto",
       }}>{children}</button>
   );
 }
@@ -829,6 +852,56 @@ function TimelineItem({ item, dark }) {
 function Contact({ dark }) {
   const [formData, setFormData] = useState({ name: "", email: "", message: "" });
   const [sent, setSent] = useState(false);
+  const [isSending, setIsSending] = useState(false);
+  const [submitError, setSubmitError] = useState("");
+
+  const serviceId = import.meta.env.VITE_EMAILJS_SERVICE_ID;
+  const templateId = import.meta.env.VITE_EMAILJS_TEMPLATE_ID;
+  const publicKey = import.meta.env.VITE_EMAILJS_PUBLIC_KEY;
+
+  const handleSubmit = async () => {
+    if (isSending) return;
+
+    const name = formData.name.trim();
+    const email = formData.email.trim();
+    const message = formData.message.trim();
+
+    if (!name || !email || !message) {
+      setSubmitError("Please fill out name, email, and message.");
+      return;
+    }
+
+    if (!serviceId || !templateId || !publicKey) {
+      setSubmitError("Contact form is not configured yet. Please set EmailJS environment variables.");
+      return;
+    }
+
+    try {
+      setIsSending(true);
+      setSubmitError("");
+
+      await emailjs.send(
+        serviceId,
+        templateId,
+        {
+          from_name: name,
+          from_email: email,
+          message,
+          to_name: "Bidusha",
+        },
+        {
+          publicKey,
+        }
+      );
+
+      setSent(true);
+      setFormData({ name: "", email: "", message: "" });
+    } catch (error) {
+      setSubmitError("Message failed to send. Please try again in a moment.");
+    } finally {
+      setIsSending(false);
+    }
+  };
 
   const contacts = [
     { icon: "✉️", label: "Email", value: "bidushathapa@gmail.com", href: "mailto:bidushathapa@gmail.com" },
@@ -901,6 +974,7 @@ function Contact({ dark }) {
                       fontFamily: "'DM Sans', sans-serif", fontSize: 14,
                       outline: "none", boxSizing: "border-box",
                     }}
+                    disabled={isSending}
                   />
                 </div>
               ))}
@@ -919,9 +993,22 @@ function Contact({ dark }) {
                     fontFamily: "'DM Sans', sans-serif", fontSize: 14,
                     outline: "none", resize: "vertical", boxSizing: "border-box",
                   }}
+                  disabled={isSending}
                 />
               </div>
-              <PrimaryBtn onClick={() => setSent(true)} dark={dark}>Send Message</PrimaryBtn>
+              {submitError && (
+                <p style={{
+                  margin: "0 0 16px",
+                  fontFamily: "'DM Sans', sans-serif",
+                  fontSize: 13,
+                  color: "#ef4444",
+                }}>
+                  {submitError}
+                </p>
+              )}
+              <PrimaryBtn onClick={handleSubmit} dark={dark} disabled={isSending}>
+                {isSending ? "Sending..." : "Send Message"}
+              </PrimaryBtn>
             </div>
           )}
         </Reveal>
